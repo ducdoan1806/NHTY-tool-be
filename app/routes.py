@@ -104,7 +104,10 @@ def init_app(app):
             page = request.args.get('page', 1, type=int)
             per_page = request.args.get('page_size', 10, type=int)
             
+            user_id = session.get('user_id')  # Get user_id from session
             query = Project.query
+            query = query.filter_by(user_id=user_id)
+
             pagination = StandardPagesPagination(query, page, per_page)
             
             project_schema = ProjectSchema(many=True)
@@ -213,34 +216,36 @@ def init_app(app):
 
     def create_image():
         try:
-            if 'file' not in request.files:
-                return jsonify({'error': 'No file part'}), 400
-            
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({'error': 'No selected file'}), 400
-            
-            if file:
+            files = request.files.getlist('files')  # Lấy danh sách tệp tin từ form
+            if not files:
+                return jsonify({'error': 'No files provided'}), 400
+
+            project_id = request.form.get('project_id')
+            if not project_id:
+                return jsonify({'error': 'project_id is required'}), 400
+
+            image_paths = []
+            for file in files:
+                if file.filename == '':
+                    continue  # Bỏ qua tệp không có tên
+
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
-                
-                # Lấy project_id từ form data
-                project_id = request.form.get('project_id')
-                if not project_id:
-                    return jsonify({'error': 'project_id is required'}), 400
-                
-                # Tạo đối tượng Image
+                image_paths.append(file_path)
+
+                # Tạo đối tượng Image cho mỗi tệp tin
                 new_image = Image(
                     file_path=file_path,
                     project_id=int(project_id)  # Chuyển đổi project_id thành số nguyên
                 )
                 db.session.add(new_image)
-                db.session.commit()
-                
-                # Trả về kết quả
-                image_schema = ImageSchema()
-                return jsonify(image_schema.dump(new_image)), 201
+            
+            db.session.commit()
+
+            # Trả về kết quả
+            image_schema = ImageSchema(many=True)
+            return jsonify({'images': image_schema.dump(Image.query.filter(Image.file_path.in_(image_paths)).all())}), 201
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             lineno = exc_tb.tb_lineno
