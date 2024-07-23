@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation and Text-to-Speech</title>
+</head>
+<body>
+    <h1>Text Translation</h1>
+    <form action="/translate" method="post">
+        <label for="text">Text to Translate:</label>
+        <input type="text" id="text" name="text" placeholder="Enter text to translate" required>
+        <label for="lang">Target Language:</label>
+        <input type="text" id="lang" name="lang" placeholder="e.g., 'es' for Spanish" required>
+        <button type="submit">Translate</button>
+    </form>
+
+    <h1>Text-to-Speech</h1>
+    <form action="/text_to_speech" method="post">
+        <label for="tts_text">Text to Convert to Speech:</label>
+        <input type="text" id="tts_text" name="text" placeholder="Enter text to convert to speech" required>
+        <button type="submit">Convert to Speech</button>
+    </form>
+
+    <h1>Generate Video</h1>
+    <form action="/generate_video" method="post" enctype="multipart/form-data">
+        <label for="video_text">Text for Video:</label>
+        <input type="text" id="video_text" name="text" placeholder="Enter text for video" required>
+        <label for="image">Select Image:</label>
+        <input type="file" id="image" name="image" accept="image/*" required>
+        <button type="submit">Generate Video</button>
+    </form>
+</body>
+</html>
