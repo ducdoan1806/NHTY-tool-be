@@ -44,7 +44,7 @@ def is_valid_password(password):
 def generate_jwt_token(user_id):
     try:
         # Set expiration time
-        expires_delta = datetime.timedelta(minutes=360)  # Default to 1 day
+        expires_delta = datetime.timedelta(days=7)  # Default to 1 day
         expiration = datetime.datetime.utcnow() + expires_delta
         payload = {
             "sub": user_id,
