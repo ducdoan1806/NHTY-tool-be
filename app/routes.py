@@ -319,7 +319,7 @@ def init_app(app):
         db.session.commit()
         return jsonify({'message': 'Texts added successfully'}), 200
 
-    @app.route('/language', methods=['POST'])
+    @app.route('/language', methods=['GET'])
     @login_required
     def language_list():
         lis_code=[]
