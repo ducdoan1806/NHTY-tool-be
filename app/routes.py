@@ -13,20 +13,17 @@ from .serializers import *
 from marshmallow import ValidationError
 
 def init_app(app):
+    # @app.after_request
+    # def after_request(response):
+    #     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4443')
+    #     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    #     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    #     response.headers.add('Access-Control-Allow-Credentials', 'true')
+    #     return response
+
     @app.route('/')
     def index():
         return "API is running!"
-
-    @app.route('/user', methods=['GET'])
-    @login_required
-    def get_user():
-        user_id = session.get('user_id')  # Assumes user ID is stored in the session
-        if not user_id:
-            return jsonify({"error": "User ID not found in session"}), 401
-        print(f"{user_id}")
-        user = User.query.get_or_404(user_id)
-        user_schema = UserSchema()
-        return jsonify(user_schema.dump(user))
 
     @app.route('/register', methods=['POST'])
     def register():
@@ -70,20 +67,18 @@ def init_app(app):
 
         if not jwt_token:
             return jsonify({"error": "Failed to generate JWT token"}), 500
-        print(f"{jwt_token.get("token")}")
         # Store user ID and token in session
         session["user_id"] = user.id
         session["jwt_token"] = jwt_token
-
         response_data = {
-          "access_token": jwt_token.get("token").split(".")[1],
-          "refresh_token": jwt_token.get("token").split(".")[2],
-          "full_token": jwt_token.get("token"),
+          "access_token": jwt_token.get("token"),
           "expires_in": jwt_token.get("exp"),
           "id": user.id,
           "name": user.name,
           "email": user.email,
         }
+        # response_data.set_cookie('jwt_token', jwt_token, httponly=True, secure=True, samesite='None')
+        print(f"{jwt_token.get("token")}")
 
         return jsonify(response_data), 200
 
@@ -92,6 +87,17 @@ def init_app(app):
     def logout():
         session.pop('user_id', None)
         return jsonify({"message": "Logged out successfully"}), 200
+
+    @app.route('/user', methods=['GET'])
+    @login_required
+    def get_user():
+        user_id = getattr(request, 'user_id', None)  # Assumes user ID is stored in the session
+        if not user_id:
+            return jsonify({"error": "User ID not found in session"}), 401
+        print(f"{user_id}")
+        user = User.query.get_or_404(user_id)
+        user_schema = UserSchema()
+        return jsonify(user_schema.dump(user))
 
     @app.route('/projects', methods=['GET','POST'])
     @login_required
@@ -105,7 +111,7 @@ def init_app(app):
             page = request.args.get('page', 1, type=int)
             per_page = request.args.get('page_size', 10, type=int)
             
-            user_id = session.get('user_id')  # Get user_id from session
+            user_id = getattr(request, 'user_id', None)  # Get user_id from session
             query = Project.query
             query = query.filter_by(user_id=user_id)
 
@@ -123,7 +129,7 @@ def init_app(app):
             project_create_schema = ProjectCreateSchema()
             project_data = project_create_schema.load(data)
 
-            user_id = session.get('user_id')  # Get user_id from session
+            user_id = getattr(request, 'user_id', None)  # Get user_id from session
             new_project = Project(
                 title=project_data['title'],
                 description=project_data['description'],

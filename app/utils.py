@@ -70,7 +70,32 @@ def decode_jwt_token(token):
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if "jwt_token" not in session:
-            return jsonify({"error": "Unauthorized access"}), 401
+        # Lấy token từ header Authorization
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header:
+            return jsonify({"error": "Authorization header is missing"}), 401
+        
+        try:
+            # Tách token từ header
+            token = auth_header.split(" ")[1]  # Format: Bearer <token>
+            
+            print(token)
+            # Giải mã token
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+            # Bạn có thể kiểm tra các dữ liệu trong payload nếu cần
+            user_id = payload.get("sub")
+            
+            if not user_id:
+                return jsonify({"error": "Invalid token"}), 401
+            
+            # Đặt user_id vào request để sử dụng trong các route
+            request.user_id = user_id
+            
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+        
         return f(*args, **kwargs)
     return decorated_function

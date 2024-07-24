@@ -1,7 +1,7 @@
 import os
 
-SECRET_KEY = os.urandom(24).hex()
-JWT_SECRET_KEY = os.urandom(24).hex()
+SECRET_KEY = "hundeptrai"
+JWT_SECRET_KEY = "hungdeptrai"
 SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 UPLOAD_FOLDER = 'uploads'
