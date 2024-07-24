@@ -61,6 +61,7 @@ class ProjectDetailsSchema(Schema):
     
     @pre_dump
     def sort_contents(self, project, **kwargs):
+        project.contents = sorted(project.contents, key=lambda x: x.id, reverse=True)
         if project.contents:
             project.contents = sorted(project.contents, key=lambda x: x.id, reverse=True)
         if project.contents:
