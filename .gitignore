@@ -1,0 +1,9 @@
+# Bỏ qua các thư mục và tệp được tạo tự động
+node_modules/
+dist/
+build/
+
+# Bỏ qua các file cấu hình cá nhân
+.env
+config/*.local
+.db
