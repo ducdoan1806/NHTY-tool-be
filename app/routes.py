@@ -78,6 +78,7 @@ def init_app(app):
         response_data = {
           "access_token": jwt_token.get("token").split(".")[1],
           "refresh_token": jwt_token.get("token").split(".")[2],
+          "full_token": jwt_token.get("token"),
           "expires_in": jwt_token.get("exp"),
           "id": user.id,
           "name": user.name,
