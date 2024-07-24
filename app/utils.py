@@ -58,14 +58,14 @@ def generate_jwt_token(user_id):
     except Exception as e:
         return str(e)  # Ensure this is a string
 
-def decode_jwt_token(token):
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        compressed_payload = payload.get("data")
-        decompressed_payload = zlib.decompress(compressed_payload.encode('latin1'))
-        return decompressed_payload.decode()
-    except Exception as e:
-        return str(e)
+# def decode_jwt_token(token):
+#     try:
+#         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+#         compressed_payload = payload.get("data")
+#         decompressed_payload = zlib.decompress(compressed_payload.encode('latin1'))
+#         return decompressed_payload.decode()
+#     except Exception as e:
+#         return str(e)
 
 def login_required(f):
     @wraps(f)
