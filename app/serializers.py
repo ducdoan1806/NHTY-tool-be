@@ -85,7 +85,7 @@ class ContentSchema(Schema):
     def make_content(self, data, **kwargs):
         return Content(**data)
     class Meta:
-        fields = ('id', 'project_id', 'text', 'language', 'text_translate', 'created_at', 'updated_at')
+        fields = ('id', 'project_id', 'text', 'language', 'text_translate','audio64', 'created_at', 'updated_at')
 
 class ContentCreateSchema(Schema):
     text = fields.Str(required=True)

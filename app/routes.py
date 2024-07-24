@@ -2,6 +2,8 @@ from flask import request, jsonify, send_from_directory, session, url_for
 import jwt
 import datetime
 import os, sys
+import io
+import base64
 from werkzeug.utils import secure_filename
 from googletrans import Translator, LANGUAGES
 from gtts import gTTS
@@ -11,6 +13,7 @@ from . import db
 from .utils import *
 from .serializers import *
 from marshmallow import ValidationError
+from gtts import gTTS
 
 def init_app(app):
     # @app.after_request
@@ -393,14 +396,24 @@ def init_app(app):
             translated = translator.translate(text, dest=target_lang)
 
         content = Content.query.filter_by(project_id=project_id, text=text).first()
+
+        tts = gTTS(text=translated.text, lang=target_lang)
+        audio_file = io.BytesIO()
+        tts.write_to_fp(audio_file)
+        audio_file.seek(0)  # Reset file pointer to the beginning
+        base64_encoded = base64.b64encode(audio_file.read())
+        audio_data=base64_encoded.decode('utf-8')
+
         if content:
             content.text_translate = translated.text
+            content.audio64 = audio_data
         else:
             new_content = Content(
                 project_id=project_id,
                 text=text,
                 language=target_lang,
                 text_translate=translated.text,
+                audio64=audio_data
             )
             db.session.add(new_content)
 

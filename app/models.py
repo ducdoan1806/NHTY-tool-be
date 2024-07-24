@@ -27,6 +27,7 @@ class Content(db.Model):
     text = db.Column(db.Text, nullable=False)
     language = db.Column(db.String(10), nullable=False)
     text_translate = db.Column(db.Text, nullable=False)
+    audio64 = db.Column(db.Text, nullable=True)
 
     project_id = db.Column(db.Integer, db.ForeignKey('project.id', name='fk_project'), nullable=False)
     project = db.relationship('Project', backref=db.backref('contents', lazy=True))
