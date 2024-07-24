@@ -3,7 +3,7 @@ import jwt
 import datetime
 import os, sys
 from werkzeug.utils import secure_filename
-from googletrans import Translator
+from googletrans import Translator, LANGUAGES
 from gtts import gTTS
 import moviepy.editor as mp
 from .models import *
@@ -318,6 +318,14 @@ def init_app(app):
 
         db.session.commit()
         return jsonify({'message': 'Texts added successfully'}), 200
+
+    @app.route('/language', methods=['POST'])
+    @login_required
+    def language_list():
+        lis_code=[]
+        for code, language in LANGUAGES.items():
+            lis_code.append({'code': code, 'language': language})
+        return jsonify(lis_code)
 
     @app.route('/translate', methods=['POST'])
     @login_required
