@@ -99,21 +99,43 @@ def init_app(app):
         user_schema = UserSchema()
         return jsonify(user_schema.dump(user))
 
-    @app.route('/projects', methods=['GET','POST'])
+    @app.route('/projects/<int:project_id>', methods=['GET'])
+    @login_required
+    def get_project_details(project_id):
+        try:
+            user_id = getattr(request, 'user_id', None)  # Get user_id from session
+            project = Project.query.filter_by(id=project_id, user_id=user_id).first()
+            
+            if not project:
+                return jsonify({'error': 'Project not found'}), 404
+
+            project_schema = ProjectDetailsSchema()
+            project_data = project_schema.dump(project)
+            
+            return jsonify(project_data), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/projects', methods=['GET','POST', 'DELETE'])
     @login_required
     def projects():
         if request.method == 'GET':
             return get_projects()
         elif request.method == 'POST':
             return create_project()
+        elif request.method == 'DELETE':
+            return delete_project()
     def get_projects():
         try:
             page = request.args.get('page', 1, type=int)
             per_page = request.args.get('page_size', 10, type=int)
+            title = request.args.get('title', None)
             
             user_id = getattr(request, 'user_id', None)  # Get user_id from session
-            query = Project.query
+            query = Project.query.order_by(Project.id.desc())
             query = query.filter_by(user_id=user_id)
+            if title:
+                query = query.filter_by(title=title)
 
             pagination = StandardPagesPagination(query, page, per_page)
             
@@ -141,6 +163,26 @@ def init_app(app):
             return jsonify(project_schema.dump(new_project)), 201
         except ValidationError as err:
             return jsonify({'errors': err.messages}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    def delete_project():
+        try:
+            data = request.get_json()
+            project_id = data.get('id')
+
+            if not project_id:
+                return jsonify({'error': 'No project ID provided'}), 400
+
+            user_id = getattr(request, 'user_id', None)  # Get user_id from session
+            project = Project.query.filter_by(id=project_id, user_id=user_id).first()
+
+            if not project:
+                return jsonify({'error': 'Project not found or you do not have permission to delete it'}), 404
+
+            db.session.delete(project)
+            db.session.commit()
+
+            return jsonify({'message': 'Project deleted successfully'}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 

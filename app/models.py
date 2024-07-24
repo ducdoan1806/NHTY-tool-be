@@ -19,6 +19,8 @@ class Project(db.Model):
     user = db.relationship('User', backref=db.backref('projects', lazy=True))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    class Meta:
+        ordering = ['-id']
 
 class Content(db.Model):
     id = db.Column(db.Integer, primary_key=True)

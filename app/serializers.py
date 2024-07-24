@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, post_load, validates, ValidationError, post_dump
+from marshmallow import Schema, fields, post_load, validates, ValidationError, post_dump, pre_dump
 from app import db
 from app.models import User, Project, Content, Image
 import pytz
@@ -34,6 +34,38 @@ class ProjectSchema(Schema):
     updated_at = fields.DateTime()
     class Meta:
         fields = ('id', 'title', 'description', 'user', 'created_at', 'updated_at')
+           
+class ImageLTESchema(Schema):
+    id = fields.Int(dump_only=True)
+    file_path = fields.Str(required=True)
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
+
+class ContentLTESchema(Schema):
+    id = fields.Int(dump_only=True)
+    text = fields.Str(required=True)
+    language = fields.Str(required=True)
+    text_translate = fields.Str(required=True)
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
+
+class ProjectDetailsSchema(Schema):
+    id = fields.Int(dump_only=True)
+    title = fields.Str(required=True)
+    description = fields.Str()
+    user = fields.Nested(UserLTESchema, dump_only=True)
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
+    contents = fields.List(fields.Nested(ContentLTESchema), dump_only=True)
+    images = fields.List(fields.Nested(ImageLTESchema), dump_only=True)
+    
+    @pre_dump
+    def sort_contents(self, project, **kwargs):
+        if project.contents:
+            project.contents = sorted(project.contents, key=lambda x: x.id, reverse=True)
+        if project.contents:
+            project.images = sorted(project.images, key=lambda x: x.id, reverse=True)
+        return project
 
 class ProjectCreateSchema(Schema):
     title = fields.String(required=True, validate=lambda x: len(x) > 0 and len(x) <= 100)
@@ -53,7 +85,6 @@ class ContentSchema(Schema):
         return Content(**data)
     class Meta:
         fields = ('id', 'project_id', 'text', 'language', 'text_translate', 'created_at', 'updated_at')
-
 
 class ContentCreateSchema(Schema):
     text = fields.Str(required=True)
