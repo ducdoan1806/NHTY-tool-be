@@ -135,7 +135,8 @@ def init_app(app):
             query = Project.query.order_by(Project.id.desc())
             query = query.filter_by(user_id=user_id)
             if title:
-                query = query.filter_by(title=title)
+                title_filter = f"%{title}%"  # Create a pattern for partial match
+                query = query.filter(Project.title.ilike(title_filter))  # Use ilike for case-insensitive match
 
             pagination = StandardPagesPagination(query, page, per_page)
             
