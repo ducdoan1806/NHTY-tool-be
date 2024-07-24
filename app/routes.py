@@ -375,6 +375,7 @@ def init_app(app):
     def translate_text():
         data = request.get_json()
         text = data.get('text')
+        from_lang = data.get('from')
         target_lang = data.get('lang')
         project_id = data.get('project_id')
 
@@ -386,7 +387,10 @@ def init_app(app):
             return jsonify({'error': 'Project not found'}), 404
 
         translator = Translator()
-        translated = translator.translate(text, dest=target_lang)
+        if from_lang:
+            translated = translator.translate(text, src=from_lang, dest=target_lang)
+        else:
+            translated = translator.translate(text, dest=target_lang)
 
         content = Content.query.filter_by(project_id=project_id, text=text).first()
         if content:
