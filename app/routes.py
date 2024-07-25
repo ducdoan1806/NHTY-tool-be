@@ -428,6 +428,7 @@ def init_app(app):
                 new_content = Content(
                     project_id=project_id,
                     text=content['text'],
+                    lang_from=content['from'],
                     language=content['lang'],
                     text_translate=content['text_translate']
                 )
