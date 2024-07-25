@@ -78,6 +78,8 @@ def login_required(f):
         
         try:
             # Tách token từ header
+            if len(auth_header.split(" "))<2:
+                return jsonify({"error": "Invalid token"}), 401
             token = auth_header.split(" ")[1]  # Format: Bearer <token>
             
             print(token)

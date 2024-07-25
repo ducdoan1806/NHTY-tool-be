@@ -14,6 +14,7 @@ from .utils import *
 from .serializers import *
 from marshmallow import ValidationError
 from gtts import gTTS
+import json
 
 def init_app(app):
     # @app.after_request
@@ -382,7 +383,7 @@ def init_app(app):
         target_lang = data.get('lang')
         project_id = data.get('project_id')
 
-        if not text or not target_lang or not project_id:
+        if not target_lang or not project_id:
             return jsonify({'error': 'Missing text, lang, or project_id field'}), 400
 
         project = Project.query.get(project_id)
@@ -394,34 +395,56 @@ def init_app(app):
             translated = translator.translate(text, src=from_lang, dest=target_lang)
         else:
             translated = translator.translate(text, dest=target_lang)
+            
+        return jsonify({
+            'translated_text': translated.text
+        })
 
-        content = Content.query.filter_by(project_id=project_id, text=text).first()
-
-        tts = gTTS(text=translated.text, lang=target_lang)
+    @app.route('/text_to_voice', methods=['POST'])
+    def text_to_speech():
+        data = request.get_json()
+        text = data.get('text')
+        lang = data.get('lang')
+        # Create voice to translate text
+        tts = gTTS(text=text, lang=lang)
         audio_file = io.BytesIO()
         tts.write_to_fp(audio_file)
         audio_file.seek(0)  # Reset file pointer to the beginning
         base64_encoded = base64.b64encode(audio_file.read())
         audio_data=base64_encoded.decode('utf-8')
-
-        if content:
-            content.text_translate = translated.text
-            content.audio64 = audio_data
-        else:
-            new_content = Content(
-                project_id=project_id,
-                text=text,
-                language=target_lang,
-                text_translate=translated.text,
-                audio64=audio_data
-            )
-            db.session.add(new_content)
-
-        db.session.commit()
-        return jsonify({'translated_text': translated.text})
-
-    @app.route('/text_to_speech', methods=['POST'])
+        return jsonify({
+            'text': text,
+            'voice': audio_data
+        })
+    @app.route('/project_data', methods=['POST'])
     @login_required
-    def text_to_speech():
-        data = request.get_json()
-       
+    def project_data():
+        project_id = request.form.get('project_id')
+        contents = request.form.get('contents')
+        files = request.files.getlist('images')
+        try:
+            contents = json.loads(contents)
+            for content in contents:
+                new_content = Content(
+                    project_id=project_id,
+                    text=content['text'],
+                    language=content['lang'],
+                    text_translate=content['text_translate']
+                )
+                db.session.add(new_content)
+        except json.JSONDecodeError:
+            return jsonify({"status": "error", "message": "Invalid JSON format"}), 400
+        list_img=[]
+        for file in files:
+            if file and allowed_file(file.filename):
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
+                file.save(file_path)
+                new_image = Image(project_id=project_id, file_path=file_path)
+                list_img.append(file_path)
+                db.session.add(new_image)
+        db.session.commit()
+        return jsonify({
+            "project_id": project_id,
+            "contents": contents,
+            "images":list_img
+        })
