@@ -378,7 +378,7 @@ def init_app(app):
     @login_required
     def translate_text():
         data = request.get_json()
-        text = data.get('text')
+        text = data.get('text',"")
         from_lang = data.get('from')
         target_lang = data.get('lang')
         project_id = data.get('project_id')
@@ -391,14 +391,19 @@ def init_app(app):
             return jsonify({'error': 'Project not found'}), 404
 
         translator = Translator()
-        if from_lang:
-            translated = translator.translate(text, src=from_lang, dest=target_lang)
+        if text:
+            if from_lang:
+                translated = translator.translate(text, src=from_lang, dest=target_lang)
+            else:
+                translated = translator.translate(text, dest=target_lang)
+                
+            return jsonify({
+                'translated_text': translated.text
+            })
         else:
-            translated = translator.translate(text, dest=target_lang)
-            
-        return jsonify({
-            'translated_text': translated.text
-        })
+            return jsonify({
+                'translated_text': ''
+            })
 
     @app.route('/text_to_voice', methods=['POST'])
     def text_to_speech():
