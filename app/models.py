@@ -24,9 +24,9 @@ class Project(db.Model):
 
 class Content(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text, nullable=False)
+    text = db.Column(db.Text, nullable=True)
     lang_from = db.Column(db.String(10), nullable=True)
-    language = db.Column(db.String(10), nullable=False)
+    language = db.Column(db.String(10), nullable=True)
     text_translate = db.Column(db.Text, nullable=True)
     audio64 = db.Column(db.Text, nullable=True)
 
