@@ -1,4 +1,4 @@
-from flask import request, jsonify, send_from_directory, session, url_for
+from flask import request, jsonify, send_from_directory, session, url_for,send_file
 import jwt
 import datetime
 import os, sys
@@ -7,7 +7,7 @@ import base64
 from werkzeug.utils import secure_filename
 from googletrans import Translator, LANGUAGES
 from gtts import gTTS
-import moviepy.editor as mp
+from moviepy.editor import ImageClip, concatenate_videoclips, TextClip, CompositeVideoClip, AudioFileClip,concatenate_audioclips
 from .models import *
 from . import db
 from .utils import *
@@ -15,6 +15,35 @@ from .serializers import *
 from marshmallow import ValidationError
 from gtts import gTTS
 import json
+from PIL import Image
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+# Đường dẫn lưu trữ tạm thời
+TEMP_DIR = "C:\\Users\\ddoan\\Project\\NHTY-tool-be\\temp" #folder chứa ảnh và video
+if not os.path.exists(TEMP_DIR):
+    os.makedirs(TEMP_DIR)
+
+def resize_image(image_path, target_size, index):
+    try:
+        img = Image.open(image_path)
+        img.thumbnail(target_size, Image.Resampling.LANCZOS)
+
+        # Tạo một hình ảnh mới với kích thước đích và màu nền đen
+        background = Image.new('RGB', target_size, (0, 0, 0))
+        img_position = (
+            (target_size[0] - img.size[0]) // 2,
+            (target_size[1] - img.size[1]) // 2
+        )
+        background.paste(img, img_position)
+        
+        resized_image_path = os.path.join(TEMP_DIR, f"resized_image_{index}.jpg")
+        background.save(resized_image_path, 'JPEG')
+        return resized_image_path
+    except Exception as e:
+        logger.error(f"Error resizing and padding image {image_path}: {e}")
+        raise
 
 def init_app(app):
     # @app.after_request
@@ -454,3 +483,72 @@ def init_app(app):
             "contents": contents,
             "images":list_img
         })
+    @app.route('/create_video', methods=['POST'])
+    def create_video():
+        try:
+            files = request.files.getlist('images')
+            texts = request.form.getlist('texts')
+            
+            voice_type=request.form.getlist('voice_type')
+         
+
+            if not files or not texts or not texts or len(files) != len(texts) != len(voice_type):
+                return jsonify({"error": "Please provide the same number of images, texts, and texts"}), 400
+
+            clips = []
+            target_size = (1280, 720)  # Kích thước đích (chiều rộng, chiều cao)
+
+            for index, file in enumerate(files):
+                image_path = os.path.join(TEMP_DIR, f"image_{index}.jpg")
+                file.save(image_path)
+                text = texts[index]
+
+            # Resize image and pad to maintain aspect ratio
+                resized_image_path = resize_image(image_path, target_size, index)
+
+            # Generate speech from text
+                tts = gTTS(text, lang=voice_type[0])
+                audio_path = os.path.join(TEMP_DIR, f"voice_{index}.mp3")
+                tts.save(audio_path)
+
+            # Create audio clip and get its duration
+                audio_clip = AudioFileClip(audio_path)
+                audio_duration = audio_clip.duration
+
+            # Create image clip with the same duration as the audio
+                image_clip = ImageClip(resized_image_path, duration=audio_duration)
+
+            # Create text clip with the same duration as the audio
+                text_clip = TextClip(text, fontsize=20, color='white', size=image_clip.size, method='caption')
+                text_clip = text_clip.set_duration(audio_duration)
+
+            # Position the text at the bottom center
+                text_position = ('center', target_size[1] - text_clip.size[1] - 10)  # 10 là khoảng cách từ dưới lên
+                text_clip = text_clip.set_position(text_position)
+
+            # Combine image and text
+                video = CompositeVideoClip([image_clip, text_clip])
+
+            # Set audio to video
+                video = video.set_audio(audio_clip)
+
+                clips.append(video)
+
+        # Concatenate all clips
+            final_video = concatenate_videoclips(clips)
+
+            output_path = os.path.join(TEMP_DIR, "output.mp4")
+            final_video.write_videofile(output_path, fps=24)
+
+        # Clean up temporary audio and image files
+            for index in range(len(files)):
+                os.remove(os.path.join(TEMP_DIR, f"voice_{index}.mp3"))
+                os.remove(os.path.join(TEMP_DIR, f"image_{index}.jpg"))
+                os.remove(os.path.join(TEMP_DIR, f"resized_image_{index}.jpg"))
+
+        # Return video file for download
+            return send_file(output_path, as_attachment=True)
+
+        except Exception as e:
+            logger.error(f"Error creating video: {str(e)}")
+            return jsonify({"error": f"Error creating video: {str(e)}"}), 500
