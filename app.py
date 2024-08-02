@@ -425,10 +425,5 @@ def generate_video():
     return jsonify({"error": "No image file provided"}), 400
 
 
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=81818)
