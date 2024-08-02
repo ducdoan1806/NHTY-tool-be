@@ -1,13 +1,13 @@
 from flask import request, jsonify, redirect, session, url_for, send_file
-import jwt
-import datetime
+
 import os, sys
 import io
-import urllib.parse
+
 import base64
 from werkzeug.utils import secure_filename
 from googletrans import Translator, LANGUAGES
 from gtts import gTTS
+import uuid
 from moviepy.editor import (
     ImageClip,
     concatenate_videoclips,
@@ -34,7 +34,7 @@ if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
 
-def resize_image(image_path, target_size, index):
+def resize_image(image_path, target_size, index, new_uuid):
     try:
         img = Image.open(image_path)
         img.thumbnail(target_size, Image.Resampling.LANCZOS)
@@ -47,7 +47,9 @@ def resize_image(image_path, target_size, index):
         )
         background.paste(img, img_position)
 
-        resized_image_path = os.path.join(TEMP_DIR, f"resized_image_{index}.jpg")
+        resized_image_path = os.path.join(
+            TEMP_DIR, f"resized_image_{new_uuid}_{index}.jpg"
+        )
         background.save(resized_image_path, "JPEG")
         return resized_image_path
     except Exception as e:
@@ -486,10 +488,10 @@ def init_app(app):
             audio_file.seek(0)  # Reset file pointer to the beginning
             base64_encoded = base64.b64encode(audio_file.read())
             audio_data = base64_encoded.decode("utf-8")
-            return jsonify({"text": text, "voice": audio_data}, 201)
+            return (jsonify({"text": text, "voice": audio_data}), 201)
         except Exception as e:
             return (
-                jsonify({"status": False, "message": str(e)}),
+                (jsonify({"status": False, "message": str(e)})),
                 500,
             )
 
@@ -553,18 +555,20 @@ def init_app(app):
 
             clips = []
             target_size = (1280, 720)  # Kích thước đích (chiều rộng, chiều cao)
-
+            new_uuid = uuid.uuid4()
             for index, file in enumerate(files):
-                image_path = os.path.join(TEMP_DIR, f"image_{index}.jpg")
+                image_path = os.path.join(TEMP_DIR, f"image_{new_uuid}_{index}.jpg")
                 file.save(image_path)
                 text = texts[index]
 
                 # Resize image and pad to maintain aspect ratio
-                resized_image_path = resize_image(image_path, target_size, index)
+                resized_image_path = resize_image(
+                    image_path, target_size, index, new_uuid
+                )
 
                 # Generate speech from text
                 tts = gTTS(text, lang=voice_type[0])
-                audio_path = os.path.join(TEMP_DIR, f"voice_{index}.mp3")
+                audio_path = os.path.join(TEMP_DIR, f"voice_{new_uuid}_{index}.mp3")
                 tts.save(audio_path)
 
                 # Create audio clip and get its duration
@@ -574,25 +578,26 @@ def init_app(app):
                 # Create image clip with the same duration as the audio
                 image_clip = ImageClip(resized_image_path, duration=audio_duration)
 
-                # Create text clip with the same duration as the audio
-                text_clip = TextClip(
-                    text,
-                    fontsize=20,
-                    color="white",
-                    size=image_clip.size,
-                    method="caption",
-                )
-                text_clip = text_clip.set_duration(audio_duration)
+                # # Create text clip with the same duration as the audio
+                # text_clip = TextClip(
+                #     text,
+                #     fontsize=20,
+                #     color="white",
+                #     size=image_clip.size,
+                #     method="caption",
+                # )
+                # text_clip = text_clip.set_duration(audio_duration)
 
-                # Position the text at the bottom center
-                text_position = (
-                    "center",
-                    target_size[1] - text_clip.size[1] - 10,
-                )  # 10 là khoảng cách từ dưới lên
-                text_clip = text_clip.set_position(text_position)
+                # # Position the text at the bottom center
+                # text_position = (
+                #     "center",
+                #     target_size[1] - text_clip.size[1] - 10,
+                # )  # 10 là khoảng cách từ dưới lên
+                # text_clip = text_clip.set_position(text_position)
 
                 # Combine image and text
-                video = CompositeVideoClip([image_clip, text_clip])
+                # video = CompositeVideoClip([image_clip, text_clip])
+                video = CompositeVideoClip([image_clip])
 
                 # Set audio to video
                 video = video.set_audio(audio_clip)
@@ -602,14 +607,16 @@ def init_app(app):
             # Concatenate all clips
             final_video = concatenate_videoclips(clips)
 
-            output_path = os.path.join(TEMP_DIR, "output.mp4")
+            output_path = os.path.join(TEMP_DIR, f"{new_uuid}.mp4")
             final_video.write_videofile(output_path, fps=24)
 
             # Clean up temporary audio and image files
             for index in range(len(files)):
-                os.remove(os.path.join(TEMP_DIR, f"voice_{index}.mp3"))
-                os.remove(os.path.join(TEMP_DIR, f"image_{index}.jpg"))
-                os.remove(os.path.join(TEMP_DIR, f"resized_image_{index}.jpg"))
+                os.remove(os.path.join(TEMP_DIR, f"voice_{new_uuid}_{index}.mp3"))
+                os.remove(os.path.join(TEMP_DIR, f"image_{new_uuid}_{index}.jpg"))
+                os.remove(
+                    os.path.join(TEMP_DIR, f"resized_image_{new_uuid}_{index}.jpg")
+                )
 
             # Return video file for download
             return send_file(output_path, as_attachment=True)
