@@ -38,7 +38,7 @@ class Project(db.Model):
     #     cascade="all, delete-orphan",
     # )
     images = db.relationship(
-        "Image", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
+        "Images", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
     )
 
     class Meta:
@@ -61,7 +61,7 @@ class Content(db.Model):
     )
 
 
-class Image(db.Model):
+class Images(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_path = db.Column(db.String(200), nullable=False)
     project_id = db.Column(

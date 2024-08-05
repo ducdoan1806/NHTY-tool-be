@@ -8,7 +8,7 @@ from marshmallow import (
     pre_dump,
 )
 from app import db
-from app.models import User, Project, Content, Image
+from app.models import User, Project, Content, Images
 import pytz
 from datetime import datetime
 
@@ -41,12 +41,23 @@ class ProjectSchema(Schema):
     id = fields.Int(dump_only=True)
     title = fields.Str(required=True)
     description = fields.Str()
+    content = fields.Str(required=True)
+    lang = fields.Str(required=True)
     user = fields.Nested(UserLTESchema, dump_only=True)
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
 
     class Meta:
-        fields = ("id", "title", "description", "user", "created_at", "updated_at")
+        fields = (
+            "id",
+            "title",
+            "description",
+            "user",
+            "created_at",
+            "updated_at",
+            "content",
+            "lang",
+        )
 
 
 class ImageLTESchema(Schema):
@@ -87,6 +98,8 @@ class ProjectCreateSchema(Schema):
         required=True, validate=lambda x: len(x) > 0 and len(x) <= 100
     )
     description = fields.String(required=True)
+    content = fields.String(required=True)
+    lang = fields.String(required=True)
 
 
 class ContentSchema(Schema):
@@ -133,7 +146,7 @@ class ImageSchema(Schema):
 
     @post_load
     def make_image(self, data, **kwargs):
-        return Image(**data)
+        return Images(**data)
 
     class Meta:
         fields = ("id", "file_path", "project_id", "created_at", "updated_at")

@@ -34,6 +34,14 @@ if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
 
+def getError(e):
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    lineno = exc_tb.tb_lineno
+    file_path = exc_tb.tb_frame.f_code.co_filename
+    file_name = os.path.basename(file_path)
+    return f"[{file_name}_{lineno}] {str(e)}"
+
+
 def resize_image(image_path, target_size, index, new_uuid):
     try:
         img = Image.open(image_path)
@@ -351,7 +359,7 @@ def init_app(app):
                 image_paths.append(file_path)
 
                 # Tạo đối tượng Image cho mỗi tệp tin
-                new_image = Image(
+                new_image = Images(
                     file_path=file_path,
                     project_id=int(project_id),  # Chuyển đổi project_id thành số nguyên
                 )
@@ -365,7 +373,7 @@ def init_app(app):
                 jsonify(
                     {
                         "images": image_schema.dump(
-                            Image.query.filter(Image.file_path.in_(image_paths)).all()
+                            Images.query.filter(Images.file_path.in_(image_paths)).all()
                         )
                     }
                 ),
@@ -401,7 +409,7 @@ def init_app(app):
                     app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
                 )
                 file.save(file_path)
-                new_image = Image(project_id=project_id, file_path=file_path)
+                new_image = Images(project_id=project_id, file_path=file_path)
                 db.session.add(new_image)
 
         db.session.commit()
@@ -452,29 +460,33 @@ def init_app(app):
     @app.route("/translate", methods=["POST"])
     @login_required
     def translate_text():
-        data = request.get_json()
-        text = data.get("text", "")
-        from_lang = data.get("from")
-        target_lang = data.get("lang")
-        project_id = data.get("project_id")
+        try:
+            data = request.get_json()
+            text = data.get("text", "")
+            from_lang = data.get("from")
+            target_lang = data.get("lang")
 
-        if not target_lang or not project_id:
-            return jsonify({"error": "Missing text, lang, or project_id field"}), 400
+            if not target_lang:
+                return (
+                    jsonify({"error": "Missing text, lang field"}),
+                    400,
+                )
 
-        project = Project.query.get(project_id)
-        if not project:
-            return jsonify({"error": "Project not found"}), 404
+            translator = Translator()
+            if text:
+                if from_lang:
+                    translated = translator.translate(
+                        text, src=from_lang, dest=target_lang
+                    )
+                else:
+                    translated = translator.translate(text, dest=target_lang)
 
-        translator = Translator()
-        if text:
-            if from_lang:
-                translated = translator.translate(text, src=from_lang, dest=target_lang)
+                return jsonify({"translated_text": translated.text})
             else:
-                translated = translator.translate(text, dest=target_lang)
-
-            return jsonify({"translated_text": translated.text})
-        else:
-            return jsonify({"translated_text": ""})
+                return jsonify({"translated_text": ""})
+        except Exception as e:
+            print("error" + getError(e))
+            return jsonify({"error": getError(e)}), 500
 
     @app.route("/text_to_voice", methods=["POST"])
     def text_to_speech():
@@ -506,8 +518,9 @@ def init_app(app):
             content = request.form.get("content")
             lang = request.form.get("lang")
             files = request.files.getlist("images")
-            content = json.loads(content)
+
             project = Project.query.get(project_id)
+
             if project:
                 project.content = content
                 project.lang = lang
@@ -520,14 +533,29 @@ def init_app(app):
                         app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
                     )
                     file.save(file_path)
-                    new_image = Image(project_id=project_id, file_path=file_path)
-                    print(new_image)
+
+                    new_image = Images(project_id=project_id, file_path=file_path)
                     list_img.append(file_path)
                     db.session.add(new_image)
             db.session.commit()
-            return jsonify({"project": project, "images": list_img})
+
+            return jsonify(
+                {
+                    "status": False,
+                    "message": "Success",
+                    "data": {
+                        "id": project.id,
+                        "title": project.title,
+                        "description": project.description,
+                        "content": project.content,
+                        "lang": project.lang,
+                        "image": list_img,
+                    },
+                }
+            )
 
         except Exception as e:
+            print(str(e))
             return jsonify({"status": False, "message": str(e)}), 500
 
     @app.route("/create_video", methods=["POST"])
