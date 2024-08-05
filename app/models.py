@@ -22,6 +22,8 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    content = db.Column(db.Text, nullable=True)
+    lang = db.Column(db.String(100), nullable=True)
     user_id = db.Column(
         db.Integer, db.ForeignKey("user.id", name="fk_user"), nullable=False
     )
@@ -30,11 +32,11 @@ class Project(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    contents = db.relationship(
-        "Content",
-        backref=db.backref("project", lazy=True),
-        cascade="all, delete-orphan",
-    )
+    # contents = db.relationship(
+    #     "Content",
+    #     backref=db.backref("project", lazy=True),
+    #     cascade="all, delete-orphan",
+    # )
     images = db.relationship(
         "Image", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
     )

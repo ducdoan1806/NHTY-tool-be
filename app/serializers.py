@@ -72,18 +72,13 @@ class ProjectDetailsSchema(Schema):
     user = fields.Nested(UserLTESchema, dump_only=True)
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
-    contents = fields.List(fields.Nested(ContentLTESchema), dump_only=True)
     images = fields.List(fields.Nested(ImageLTESchema), dump_only=True)
+    content = fields.Str(required=True)
+    lang = fields.Str(required=True)
 
     @pre_dump
     def sort_contents(self, project, **kwargs):
-        project.contents = sorted(project.contents, key=lambda x: x.id, reverse=True)
-        if project.contents:
-            project.contents = sorted(
-                project.contents, key=lambda x: x.id, reverse=True
-            )
-        if project.contents:
-            project.images = sorted(project.images, key=lambda x: x.id, reverse=True)
+        project.images = sorted(project.images, key=lambda x: x.id, reverse=True)
         return project
 
 

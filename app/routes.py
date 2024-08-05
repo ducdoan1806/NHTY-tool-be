@@ -236,7 +236,10 @@ def init_app(app):
                 title=project_data["title"],
                 description=project_data["description"],
                 user_id=user_id,
+                lang="",
+                content="",
             )
+
             db.session.add(new_project)
             db.session.commit()
             project_schema = ProjectSchema()
@@ -498,36 +501,34 @@ def init_app(app):
     @app.route("/project_data", methods=["POST"])
     @login_required
     def project_data():
-        project_id = request.form.get("project_id")
-        contents = request.form.get("contents")
-        files = request.files.getlist("images")
         try:
-            contents = json.loads(contents)
-            for content in contents:
-                new_content = Content(
-                    project_id=project_id,
-                    text=content["text"],
-                    lang_from=content["from"],
-                    language=content["lang"],
-                    text_translate=content["text_translate"],
-                )
-                db.session.add(new_content)
-        except json.JSONDecodeError:
-            return jsonify({"status": "error", "message": "Invalid JSON format"}), 400
-        list_img = []
-        for file in files:
-            if file and allowed_file(file.filename):
-                file_path = os.path.join(
-                    app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
-                )
-                file.save(file_path)
-                new_image = Image(project_id=project_id, file_path=file_path)
-                list_img.append(file_path)
-                db.session.add(new_image)
-        db.session.commit()
-        return jsonify(
-            {"project_id": project_id, "contents": contents, "images": list_img}
-        )
+            project_id = request.form.get("project_id")
+            content = request.form.get("content")
+            lang = request.form.get("lang")
+            files = request.files.getlist("images")
+            content = json.loads(content)
+            project = Project.query.get(project_id)
+            if project:
+                project.content = content
+                project.lang = lang
+                db.session.commit()
+
+            list_img = []
+            for file in files:
+                if file and allowed_file(file.filename):
+                    file_path = os.path.join(
+                        app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
+                    )
+                    file.save(file_path)
+                    new_image = Image(project_id=project_id, file_path=file_path)
+                    print(new_image)
+                    list_img.append(file_path)
+                    db.session.add(new_image)
+            db.session.commit()
+            return jsonify({"project": project, "images": list_img})
+
+        except Exception as e:
+            return jsonify({"status": False, "message": str(e)}), 500
 
     @app.route("/create_video", methods=["POST"])
     def create_video():
