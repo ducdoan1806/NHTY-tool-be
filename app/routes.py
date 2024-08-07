@@ -29,7 +29,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Đường dẫn lưu trữ tạm thời
-TEMP_DIR = "C:\\Users\\ddoan\\Project\\NHTY-tool-be\\temp"  # folder chứa ảnh và video
+TEMP_DIR = "C:\\Dev\\github\\NHTY-tool-be\\temp"  # folder chứa ảnh và video
 if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
@@ -517,7 +517,6 @@ def init_app(app):
             project_id = request.form.get("project_id")
             content = request.form.get("content")
             lang = request.form.get("lang")
-            files = request.files.getlist("images")
 
             project = Project.query.get(project_id)
 
@@ -525,18 +524,30 @@ def init_app(app):
                 project.content = content
                 project.lang = lang
                 db.session.commit()
+            
+            list_img64 = []
+            image_arr = request.form.getlist("image_arr",None)
+            if image_arr is not None:
+                for image in image_arr:
+                    if image is not None:
+                        new_image = Images64(project_id=project_id, img_data=image)
+                        list_img64.append(image)
+                        db.session.add(new_image)
 
-            list_img = []
-            for file in files:
-                if file and allowed_file(file.filename):
-                    file_path = os.path.join(
-                        app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
-                    )
-                    file.save(file_path)
+            # files = request.files.getlist("images",None)
+            # list_img = []
+            # if files is not None:
+            #     for file in files:
+            #         if file and allowed_file(file.filename):
+            #             file_path = os.path.join(
+            #                 app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
+            #             )
+            #             file.save(file_path)
 
-                    new_image = Images(project_id=project_id, file_path=file_path)
-                    list_img.append(file_path)
-                    db.session.add(new_image)
+            #             new_image = Images(project_id=project_id, file_path=file_path)
+            #             list_img.append(file_path)
+            #             db.session.add(new_image)
+
             db.session.commit()
 
             return jsonify(
@@ -549,7 +560,8 @@ def init_app(app):
                         "description": project.description,
                         "content": project.content,
                         "lang": project.lang,
-                        "image": list_img,
+                        # "image": list_img,
+                        "image64": list_img64,
                     },
                 }
             )

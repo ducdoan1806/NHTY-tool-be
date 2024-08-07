@@ -60,6 +60,12 @@ class ProjectSchema(Schema):
         )
 
 
+class Image64LTESchema(Schema):
+    id = fields.Int(dump_only=True)
+    img_data = fields.Str(required=True)
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
+
 class ImageLTESchema(Schema):
     id = fields.Int(dump_only=True)
     file_path = fields.Str(required=True)
@@ -84,6 +90,7 @@ class ProjectDetailsSchema(Schema):
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
     images = fields.List(fields.Nested(ImageLTESchema), dump_only=True)
+    images64 = fields.List(fields.Nested(Image64LTESchema), dump_only=True)
     content = fields.Str(required=True)
     lang = fields.Str(required=True)
 

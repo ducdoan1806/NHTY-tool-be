@@ -40,6 +40,9 @@ class Project(db.Model):
     images = db.relationship(
         "Images", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
     )
+    images64 = db.relationship(
+        "Images64", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
+    )
 
     class Meta:
         ordering = ["-id"]
@@ -66,6 +69,17 @@ class Images(db.Model):
     file_path = db.Column(db.String(200), nullable=False)
     project_id = db.Column(
         db.Integer, db.ForeignKey("project.id", name="fk_project_image"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+class Images64(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    img_data = db.Column(db.Text, nullable=True)
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("project.id", name="fk_project_image64"), nullable=False
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
