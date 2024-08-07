@@ -1,5 +1,5 @@
 from flask import request, jsonify, redirect, session, url_for, send_file
-
+import base64
 import os, sys
 import io
 
@@ -29,7 +29,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Đường dẫn lưu trữ tạm thời
-TEMP_DIR = "C:\\Dev\\github\\NHTY-tool-be\\temp"  # folder chứa ảnh và video
+TEMP_DIR = "\\temp"  # folder chứa ảnh và video
 if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
@@ -521,30 +521,47 @@ def init_app(app):
             project = Project.query.get(project_id)
 
             if project:
-                if project.content!=content:
-                    new_hist = Project_his(project_id=project_id,data_type="string",column="content",
-                    action="Update",data=content, old_data=project.content)
+                if project.content != content:
+                    new_hist = Project_his(
+                        project_id=project_id,
+                        data_type="string",
+                        column="content",
+                        action="Update",
+                        data=content,
+                        old_data=project.content,
+                    )
                     db.session.add(new_hist)
                     project.content = content
 
-                if project.lang!=lang:
-                    new_hist = Project_his(project_id=project_id,data_type="string",column="lang",
-                    action="Update",data=lang, old_data=project.lang)
+                if project.lang != lang:
+                    new_hist = Project_his(
+                        project_id=project_id,
+                        data_type="string",
+                        column="lang",
+                        action="Update",
+                        data=lang,
+                        old_data=project.lang,
+                    )
                     db.session.add(new_hist)
                     project.lang = lang
                 db.session.commit()
-            
+
             list_img64 = []
-            image_arr = request.form.getlist("image_arr",None)
+            image_arr = request.form.getlist("image_arr", None)
             if image_arr is not None:
-                image_old=Images64.query.filter_by(project_id=project_id)
+                image_old = Images64.query.filter_by(project_id=project_id)
                 # kiểm tra image cũ có cái nào trùng ko, ko trùng thì xóa
-                old_img_list=[]
+                old_img_list = []
                 for old_img in image_old:
                     old_img_list.append(old_img.img_data)
                     if old_img.img_data not in image_arr:
-                        new_hist = Project_his(project_id=project_id,data_type="image64",column="image",
-                        action="Delete",data=old_img.img_data)
+                        new_hist = Project_his(
+                            project_id=project_id,
+                            data_type="image64",
+                            column="image",
+                            action="Delete",
+                            data=old_img.img_data,
+                        )
                         db.session.add(new_hist)
                         db.session.delete(old_img)
 
@@ -553,8 +570,13 @@ def init_app(app):
                         new_image = Images64(project_id=project_id, img_data=image)
                         list_img64.append(image)
                         db.session.add(new_image)
-                        new_hist = Project_his(project_id=project_id,data_type="image64",column="image",
-                        action="Add",data=image)
+                        new_hist = Project_his(
+                            project_id=project_id,
+                            data_type="image64",
+                            column="image",
+                            action="Add",
+                            data=image,
+                        )
                         db.session.add(new_hist)
 
             # files = request.files.getlist("images",None)
@@ -596,9 +618,8 @@ def init_app(app):
     @app.route("/create_video", methods=["POST"])
     def create_video():
         try:
-            files = request.files.getlist("images")
+            files = request.form.getlist("images")
             texts = request.form.getlist("texts")
-
             voice_type = request.form.getlist("voice_type")
 
             if (
@@ -621,6 +642,9 @@ def init_app(app):
             target_size = (1280, 720)  # Kích thước đích (chiều rộng, chiều cao)
             new_uuid = uuid.uuid4()
             for index, file in enumerate(files):
+                fileStr = file.split(",")[1]
+                fileStr = base64.b64decode(fileStr)
+                file = Image.open(io.BytesIO(fileStr))
                 image_path = os.path.join(TEMP_DIR, f"image_{new_uuid}_{index}.jpg")
                 file.save(image_path)
                 text = texts[index]
