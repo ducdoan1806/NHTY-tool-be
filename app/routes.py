@@ -521,18 +521,41 @@ def init_app(app):
             project = Project.query.get(project_id)
 
             if project:
-                project.content = content
-                project.lang = lang
+                if project.content!=content:
+                    new_hist = Project_his(project_id=project_id,data_type="string",column="content",
+                    action="Update",data=content, old_data=project.content)
+                    db.session.add(new_hist)
+                    project.content = content
+
+                if project.lang!=lang:
+                    new_hist = Project_his(project_id=project_id,data_type="string",column="lang",
+                    action="Update",data=lang, old_data=project.lang)
+                    db.session.add(new_hist)
+                    project.lang = lang
                 db.session.commit()
             
             list_img64 = []
             image_arr = request.form.getlist("image_arr",None)
             if image_arr is not None:
+                image_old=Images64.query.filter_by(project_id=project_id)
+                # kiểm tra image cũ có cái nào trùng ko, ko trùng thì xóa
+                old_img_list=[]
+                for old_img in image_old:
+                    old_img_list.append(old_img.img_data)
+                    if old_img.img_data not in image_arr:
+                        new_hist = Project_his(project_id=project_id,data_type="image64",column="image",
+                        action="Delete",data=old_img.img_data)
+                        db.session.add(new_hist)
+                        db.session.delete(old_img)
+
                 for image in image_arr:
-                    if image is not None:
+                    if image is not None and image not in old_img_list:
                         new_image = Images64(project_id=project_id, img_data=image)
                         list_img64.append(image)
                         db.session.add(new_image)
+                        new_hist = Project_his(project_id=project_id,data_type="image64",column="image",
+                        action="Add",data=image)
+                        db.session.add(new_hist)
 
             # files = request.files.getlist("images",None)
             # list_img = []

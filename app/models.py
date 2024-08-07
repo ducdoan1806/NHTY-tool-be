@@ -43,9 +43,29 @@ class Project(db.Model):
     images64 = db.relationship(
         "Images64", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
     )
+    History = db.relationship(
+        "Project_his", backref=db.backref("project", lazy=True), cascade="all, delete-orphan"
+    )
 
     class Meta:
         ordering = ["-id"]
+
+
+class Project_his(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.String(100), nullable=True)
+    column = db.Column(db.String(100), nullable=True)
+    comment = db.Column(db.Text, nullable=True)
+    data_type = db.Column(db.String(100), nullable=True)
+    data = db.Column(db.Text, nullable=True)
+    old_data = db.Column(db.Text, nullable=True)
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("project.id", name="fk_project_image64"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
 
 class Content(db.Model):

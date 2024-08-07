@@ -81,6 +81,15 @@ class ContentLTESchema(Schema):
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
 
+class Project_hisSchema(Schema):
+    action = fields.Str(required=True)
+    column = fields.Str(required=True)
+    comment = fields.Str(required=True)
+    data_type = fields.Str(required=True)
+    data = fields.Str(required=True)
+    old_data = fields.Str(required=True)
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
 
 class ProjectDetailsSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -91,6 +100,7 @@ class ProjectDetailsSchema(Schema):
     updated_at = fields.DateTime()
     images = fields.List(fields.Nested(ImageLTESchema), dump_only=True)
     images64 = fields.List(fields.Nested(Image64LTESchema), dump_only=True)
+    History = fields.List(fields.Nested(Project_hisSchema), dump_only=True)
     content = fields.Str(required=True)
     lang = fields.Str(required=True)
 
