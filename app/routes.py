@@ -575,7 +575,7 @@ def init_app(app):
 
             return jsonify(
                 {
-                    "status": False,
+                    "status": True,
                     "message": "Success",
                     "data": {
                         "id": project.id,
