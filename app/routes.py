@@ -26,8 +26,28 @@ import json
 from PIL import Image
 import logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+app = Flask(__name__)  # Create a file handler
+file_handler = logging.FileHandler("app.log")
+file_handler.setLevel(logging.DEBUG)  # Set the log level for the file
+
+# Create a console (stream) handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)  # Set the log level for the console
+
+# Create a log formatter
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+# Attach the formatter to both handlers
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add the handlers to the Flask app's logger
+app.logger.addHandler(file_handler)
+app.logger.addHandler(console_handler)
+
+# Set the logging level (this affects both handlers)
+app.logger.setLevel(logging.DEBUG)
+logger = app.logger
 # Đường dẫn lưu trữ tạm thời
 TEMP_DIR = "\\temp"  # folder chứa ảnh và video
 if not os.path.exists(TEMP_DIR):
@@ -216,6 +236,7 @@ def init_app(app):
             title = request.args.get("title", None)
 
             user_id = getattr(request, "user_id", None)  # Get user_id from session
+
             query = Project.query.order_by(Project.id.desc())
             query = query.filter_by(user_id=user_id)
             if title:
@@ -231,6 +252,7 @@ def init_app(app):
 
             return jsonify(paginated_data), 200
         except Exception as e:
+            logger.error(str(e))
             return jsonify({"error": str(e)}), 500
 
     def create_project():
@@ -255,6 +277,7 @@ def init_app(app):
         except ValidationError as err:
             return jsonify({"errors": err.messages}), 400
         except Exception as e:
+            logger.error(str(e))
             return jsonify({"error": str(e)}), 500
 
     @app.route("/contents", methods=["GET", "POST"])
@@ -284,6 +307,7 @@ def init_app(app):
 
             return jsonify(paginated_data), 200
         except Exception as e:
+            logger.error(str(e))
             return jsonify({"error": str(e)}), 500
 
     def create_contents():
@@ -308,6 +332,7 @@ def init_app(app):
             file_path = exc_tb.tb_frame.f_code.co_filename
             file_name = os.path.basename(file_path)
             message = f"[{file_name}_{lineno}] {str(e)}"
+            logger.error(message)
             return jsonify({"error": str(message)}), 500
 
     @app.route("/images", methods=["GET", "POST"])
@@ -336,6 +361,7 @@ def init_app(app):
 
             return jsonify({"images": paginated_data}), 200
         except Exception as e:
+            logger.error(str(e))
             return jsonify({"error": str(e)}), 500
 
     def create_image():
@@ -385,6 +411,7 @@ def init_app(app):
             file_path = exc_tb.tb_frame.f_code.co_filename
             file_name = os.path.basename(file_path)
             message = f"[{file_name}_{lineno}] {str(e)}"
+            logger.error(message)
             return jsonify({"error": str(message)}), 500
 
     @app.route("/upload_images", methods=["POST"])
@@ -465,7 +492,9 @@ def init_app(app):
             text = data.get("text", "")
             from_lang = data.get("from")
             target_lang = data.get("lang")
-
+            logger.info(
+                f"text: {text}, from_lang: {from_lang}, target_lang: {target_lang}"
+            )
             if not target_lang:
                 return (
                     jsonify({"error": "Missing text, lang field"}),
@@ -485,7 +514,7 @@ def init_app(app):
             else:
                 return jsonify({"translated_text": ""})
         except Exception as e:
-            print("error" + getError(e))
+            logger.error(getError(e))
             return jsonify({"error": getError(e)}), 500
 
     @app.route("/text_to_voice", methods=["POST"])
@@ -505,6 +534,7 @@ def init_app(app):
             audio_data = base64_encoded.decode("utf-8")
             return (jsonify({"text": text, "voice": audio_data}), 201)
         except Exception as e:
+            logger.error(str(e))
             return (
                 (jsonify({"status": False, "message": str(e)})),
                 500,
@@ -612,7 +642,7 @@ def init_app(app):
             )
 
         except Exception as e:
-            print(str(e))
+            logger.error(str(e))
             return jsonify({"status": False, "message": str(e)}), 500
 
     @app.route("/create_video", methods=["POST"])

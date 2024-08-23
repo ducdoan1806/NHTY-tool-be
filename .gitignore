@@ -9,3 +9,4 @@ config/*.local
 .db
 uploads/*
 temp/
+app.log
